@@ -48,6 +48,8 @@
 #include <locale.h>
 #include <sys/socket.h>
 
+extern void test_listpack_operations(void);
+
 #ifdef __linux__
 #include <sys/mman.h>
 #endif
@@ -6987,6 +6989,30 @@ redisTestProc *getTestProcByName(const char *name) {
 }
 #endif
 
+#ifdef TEST_LISTPACK_ONLY
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "listpack.h" // 確保引入 listpack 相關定義
+
+// 簡單的 __serverAssert 實現
+void __serverAssert(const char *estr, const char *file, int line)
+{
+    fprintf(stderr, "Assertion failed: %s, at %s:%d\n", estr, file, line);
+    abort();
+}
+
+// 測試函數聲明
+extern void test_listpack_operations(void);
+
+int main(void)
+{
+    test_listpack_operations(); // 執行您的測試函數
+    return 0;                   // 結束程序
+}
+
+#else
+
 int main(int argc, char **argv) {
     struct timeval tv;
     int j;
@@ -7259,76 +7285,79 @@ int main(int argc, char **argv) {
         serverLog(LL_NOTICE, "Configuration loaded");
     }
 
-    initServer();
-    if (background || server.pidfile) createPidFile();
-    if (server.set_proc_title) redisSetProcTitle(NULL);
-    redisAsciiArt();
-    checkTcpBacklogSettings();
-    if (server.cluster_enabled) {
-        clusterInit();
-    }
-    if (!server.sentinel_mode) {
-        moduleInitModulesSystemLast();
-        moduleLoadFromQueue();
-    }
-    ACLLoadUsersAtStartup();
-    initListeners();
-    if (server.cluster_enabled) {
-        clusterInitLast();
-    }
-    InitServerLast();
+    test_listpack_operations(); // 執行您的測試函數
+    // initServer();
+    // if (background || server.pidfile) createPidFile();
+    // if (server.set_proc_title) redisSetProcTitle(NULL);
+    // redisAsciiArt();
+    // checkTcpBacklogSettings();
+    // if (server.cluster_enabled) {
+    //     clusterInit();
+    // }
+    // if (!server.sentinel_mode) {
+    //     moduleInitModulesSystemLast();
+    //     moduleLoadFromQueue();
+    // }
+    // ACLLoadUsersAtStartup();
+    // initListeners();
+    // if (server.cluster_enabled) {
+    //     clusterInitLast();
+    // }
+    // InitServerLast();
 
-    if (!server.sentinel_mode) {
-        /* Things not needed when running in Sentinel mode. */
-        serverLog(LL_NOTICE,"Server initialized");
-        aofLoadManifestFromDisk();
-        loadDataFromDisk();
-        aofOpenIfNeededOnServerStart();
-        aofDelHistoryFiles();
-        /* While loading data, we delay applying "appendonly" config change.
-         * If there was a config change while we were inside loadDataFromDisk()
-         * above, we'll apply it here. */
-        applyAppendOnlyConfig();
+    // if (!server.sentinel_mode) {
+    //     /* Things not needed when running in Sentinel mode. */
+    //     serverLog(LL_NOTICE,"Server initialized");
+    //     aofLoadManifestFromDisk();
+    //     loadDataFromDisk();
+    //     aofOpenIfNeededOnServerStart();
+    //     aofDelHistoryFiles();
+    //     /* While loading data, we delay applying "appendonly" config change.
+    //      * If there was a config change while we were inside loadDataFromDisk()
+    //      * above, we'll apply it here. */
+    //     applyAppendOnlyConfig();
 
-        if (server.cluster_enabled) {
-            serverAssert(verifyClusterConfigWithData() == C_OK);
-        }
+    //     if (server.cluster_enabled) {
+    //         serverAssert(verifyClusterConfigWithData() == C_OK);
+    //     }
 
-        for (j = 0; j < CONN_TYPE_MAX; j++) {
-            connListener *listener = &server.listeners[j];
-            if (listener->ct == NULL)
-                continue;
+    //     for (j = 0; j < CONN_TYPE_MAX; j++) {
+    //         connListener *listener = &server.listeners[j];
+    //         if (listener->ct == NULL)
+    //             continue;
 
-            serverLog(LL_NOTICE,"Ready to accept connections %s", listener->ct->get_type(NULL));
-        }
+    //         serverLog(LL_NOTICE,"Ready to accept connections %s", listener->ct->get_type(NULL));
+    //     }
 
-        if (server.supervised_mode == SUPERVISED_SYSTEMD) {
-            if (!server.masterhost) {
-                redisCommunicateSystemd("STATUS=Ready to accept connections\n");
-            } else {
-                redisCommunicateSystemd("STATUS=Ready to accept connections in read-only mode. Waiting for MASTER <-> REPLICA sync\n");
-            }
-            redisCommunicateSystemd("READY=1\n");
-        }
-    } else {
-        sentinelIsRunning();
-        if (server.supervised_mode == SUPERVISED_SYSTEMD) {
-            redisCommunicateSystemd("STATUS=Ready to accept connections\n");
-            redisCommunicateSystemd("READY=1\n");
-        }
-    }
+    //     if (server.supervised_mode == SUPERVISED_SYSTEMD) {
+    //         if (!server.masterhost) {
+    //             redisCommunicateSystemd("STATUS=Ready to accept connections\n");
+    //         } else {
+    //             redisCommunicateSystemd("STATUS=Ready to accept connections in read-only mode. Waiting for MASTER <-> REPLICA sync\n");
+    //         }
+    //         redisCommunicateSystemd("READY=1\n");
+    //     }
+    // } else {
+    //     sentinelIsRunning();
+    //     if (server.supervised_mode == SUPERVISED_SYSTEMD) {
+    //         redisCommunicateSystemd("STATUS=Ready to accept connections\n");
+    //         redisCommunicateSystemd("READY=1\n");
+    //     }
+    // }
 
-    /* Warning the user about suspicious maxmemory setting. */
-    if (server.maxmemory > 0 && server.maxmemory < 1024*1024) {
-        serverLog(LL_WARNING,"WARNING: You specified a maxmemory value that is less than 1MB (current value is %llu bytes). Are you sure this is what you really want?", server.maxmemory);
-    }
+    // /* Warning the user about suspicious maxmemory setting. */
+    // if (server.maxmemory > 0 && server.maxmemory < 1024*1024) {
+    //     serverLog(LL_WARNING,"WARNING: You specified a maxmemory value that is less than 1MB (current value is %llu bytes). Are you sure this is what you really want?", server.maxmemory);
+    // }
 
-    redisSetCpuAffinity(server.server_cpulist);
-    setOOMScoreAdj(-1);
+    // redisSetCpuAffinity(server.server_cpulist);
+    // setOOMScoreAdj(-1);
 
-    aeMain(server.el);
-    aeDeleteEventLoop(server.el);
+    // aeMain(server.el);
+    // aeDeleteEventLoop(server.el);
     return 0;
 }
 
 /* The End */
+
+#endif

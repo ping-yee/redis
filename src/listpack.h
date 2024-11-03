@@ -33,6 +33,9 @@ typedef struct {
     long long lval;
 } listpackEntry;
 
+// 添加 `__serverAssert` 的函數原型
+void __serverAssert(const char *estr, const char *file, int line);
+
 unsigned char *lpNew(size_t capacity);
 void lpFree(unsigned char *lp);
 unsigned char* lpShrinkToFit(unsigned char *lp);
